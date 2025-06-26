@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.spec
+*.pkg
+*.exe
+*.pyc
+.vscode/
+src/build/
+src/dist/
+Test Files/
+*.xlsx
+*.xltm
+*.egg-info/
+cache/
+logs/
+geocode_cache.csv
+last_paths.json
+pole_mapper_config.json 
