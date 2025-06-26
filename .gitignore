@@ -13,6 +13,10 @@ src/dist/
 Test Files/
 *.xlsx
 *.xltm
+# Exception: Include template files in templates directory
+!templates/
+!templates/*.xlsx
+!templates/*.xltm
 *.egg-info/
 cache/
 logs/

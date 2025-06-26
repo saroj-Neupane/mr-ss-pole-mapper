@@ -1043,7 +1043,7 @@ class PoleDataProcessor:
                 if hasattr(self, 'config') and self.config:
                     # Look for template in common locations
                     possible_templates = [
-                        'C:/Users/nsaro/Desktop/Test/Consumer SS Template.xltm',
+                        'templates/Consumer SS Template.xltm',
                         'Consumer SS Template.xltm',
                         'template.xlsx',
                         'template.xltm'
