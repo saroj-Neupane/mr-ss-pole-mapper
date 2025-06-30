@@ -68,6 +68,10 @@
     "use_qc_routing": false,
     "span_length_tolerance": 3.0
   },
+  "tension_calculator": {
+    "file_path": "Test Files/Metronet tension calculator.xlsm",
+    "worksheet_name": "Calculations"
+  },
   "manual_routes_options": {
     "use_manual_routes": false,
     "clear_existing_routes": false
