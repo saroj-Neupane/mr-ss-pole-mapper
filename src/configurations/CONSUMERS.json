@@ -1,0 +1,178 @@
+{
+  "power_company": "CONSUMERS ENERGY",
+  "telecom_providers": [
+    "Proposed MetroNet",
+    "Lightower",
+    "Comcast",
+    "Verizon",
+    "AT&T",
+    "Zayo",
+    "Jackson ISD"
+  ],
+  "power_keywords": [
+    "Primary",
+    "Secondary",
+    "Neutral",
+    "Secondary Drip Loop",
+    "Riser",
+    "Transformer",
+    "Consumers",
+    "Energy",
+    "Power Guy"
+  ],
+  "ignore_scid_keywords": [
+    "AT&T",
+    "Foreign Pole",
+    "Unknown",
+    "Consumers",
+    "Energy",
+    "POLE"
+  ],
+  "telecom_keywords": {
+    "Proposed MetroNet": [
+      "MetroNet",
+      "MNT",
+      "Proposed MNT"
+    ],
+    "AT&T": [
+      "AT&T",
+      "ATT"
+    ],
+    "Verizon": [
+      "verizon",
+      "Verizon"
+    ],
+    "Comcast": [
+      "comcast",
+      "Comcast"
+    ],
+    "Lightower": [
+      "lightower",
+      "Lightower"
+    ],
+    "Zayo": [
+      "zayo",
+      "Zayo"
+    ]
+  },
+  "output_settings": {
+    "header_row": 3,
+    "data_start_row": 4,
+    "worksheet_name": "Consumers pg1"
+  },
+  "processing_options": {
+    "use_geocoding": true,
+    "open_output": false,
+    "debug_mode": false,
+    "use_decimal_format": false,
+    "use_qc_routing": false,
+    "span_length_tolerance": 3.0
+  },
+  "manual_routes_options": {
+    "use_manual_routes": false,
+    "clear_existing_routes": false
+  },
+  "column_mappings": [
+    [
+      "System",
+      "Line Number",
+      "Line No."
+    ],
+    [
+      "Pole",
+      "Number",
+      "Pole"
+    ],
+    [
+      "Pole",
+      "Address",
+      "Pole Address (if available)"
+    ],
+    [
+      "Pole",
+      "Height & Class",
+      "Pole Height & Class"
+    ],
+    [
+      "Power",
+      "Lowest Height",
+      "Secondary or Neutral Power Height (Height of Lowest Power Conductor or Equipment, excluding streetlights)"
+    ],
+    [
+      "Street Light",
+      "Lowest Height",
+      "Streetlight"
+    ],
+    [
+      "Pole",
+      "To Pole",
+      "To Pole"
+    ],
+    [
+      "Span",
+      "Length",
+      "Pole to Pole Span Length (from starting point)"
+    ],
+    [
+      "New Guy",
+      "Lead",
+      "Guy Lead"
+    ],
+    [
+      "New Guy",
+      "Direction",
+      "Guy Direction"
+    ],
+    [
+      "New Guy",
+      "Size",
+      "Guy Size"
+    ],
+    [
+      "Pole",
+      "MR Notes",
+      "Notes (Items that need to be performed by Consumers Energy or other Companies)"
+    ],
+    [
+      "Proposed MetroNet",
+      "Attachment Ht",
+      "Proposed height of new attachment point"
+    ],
+    [
+      "Proposed MetroNet",
+      "Midspan Ht",
+      "Final Mid Span Ground Clearance of Proposed Attachment"
+    ],
+    [
+      "Verizon",
+      "Attachment Ht",
+      "Verizon"
+    ],
+    [
+      "Zayo",
+      "Midspan Ht",
+      "Zayo"
+    ],
+    [
+      "AT&T",
+      "Attachment Ht",
+      "AT&T"
+    ],
+    [
+      "Jackson ISD",
+      "Attachment Ht",
+      "Jackson ISD"
+    ],
+    [
+      "Comcast",
+      "Attachment Ht",
+      "Comcast"
+    ],
+    [
+      "Proposed MetroNet",
+      "Tension",
+      "Heavy Loaded Tension (NESC Rule 251)"
+    ]
+  ],
+  "decimal_measurements": false
+}

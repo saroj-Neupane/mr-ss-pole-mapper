@@ -1,0 +1,135 @@
+{
+  "power_company": "Xcel",
+  "telecom_providers": [
+    "Proposed MetroNet",
+    "CATV",
+    "Telephone Company",
+    "Fiber"
+  ],
+  "power_keywords": [
+    "Primary",
+    "Secondary",
+    "Neutral",
+    "Transformer",
+    "Secondary Drip Loop",
+    "Riser"
+  ],
+  "telecom_keywords": {
+    "Proposed MetroNet": [
+      "Proposed MNT",
+      "MNT",
+      "MetroNet"
+    ],
+    "Comcast": [
+      "Com Cast",
+      "Commcast",
+      "comcast"
+    ],
+    "AT&T": [
+      "AT&T",
+      "ATT",
+      "att"
+    ],
+    "Lightower": [
+      "lightower",
+      "Lightower"
+    ],
+    "Kellogg": [
+      "kellogg",
+      "Kellogg"
+    ],
+    "MCI": [
+      "mci",
+      "MCI"
+    ],
+    "CATV": [
+      "CATV"
+    ],
+    "Telephone Company": [
+      "telephone company",
+      "telco"
+    ]
+  },
+  "output_settings": {
+    "header_row": 11,
+    "data_start_row": 13,
+    "worksheet_name": "1"
+  },
+  "column_mappings": [
+    [
+      "Pole",
+      "Number",
+      "Pole No. (on Map)"
+    ],
+    [
+      "Pole",
+      "Tag",
+      "Xcel Energy GIS Pole ID"
+    ],
+    [
+      "Pole",
+      "Latitude",
+      "Latitude\n\n"
+    ],
+    [
+      "Pole",
+      "Longitude",
+      "Longitude\n\n"
+    ],
+    [
+      "Pole",
+      "Height & Class",
+      "Pole Ht/ Class"
+    ],
+    [
+      "Power",
+      "Lowest Height",
+      "Lowest Power at Pole"
+    ],
+    [
+      "Power",
+      "Lowest Height",
+      "Lowest Power Cable at Mid-span"
+    ],
+    [
+      "Street Light",
+      "Lowest Height",
+      "Street Light Bracket / Drip Loop (Lowest)"
+    ],
+    [
+      "comm1",
+      "Midspan Ht",
+      "Highest Existing Communic. At Pole (1)"
+    ],
+    [
+      "comm2",
+      "Attachment Ht",
+      "Existing Communic. At Pole (2)"
+    ],
+    [
+      "comm3",
+      "Attachment Ht",
+      "Existing Communic. At Pole (3)"
+    ],
+    [
+      "Pole",
+      "Number of Existing Risers",
+      "# of Existing Risers"
+    ],
+    [
+      "Proposed MetroNet",
+      "Attachment Ht",
+      "Proposed Attachment Height for New Cable"
+    ],
+    [
+      "Proposed MetroNet",
+      "Midspan Ht",
+      "Proposed Mid-span Cable Height (Must meet Sht J-6 min. and local ord.)"
+    ],
+    [
+      "Pole",
+      "MR Notes",
+      "Proposed Modifications / Make-Ready Necessary to Allow for Attachment"
+    ]
+  ]
+}

@@ -1,0 +1,156 @@
+{
+  "power_company": "MVEC",
+  "telecom_providers": [
+    "Proposed MetroNet",
+    "Lightower",
+    "Comcast",
+    "Verizon",
+    "AT&T",
+    "CATV",
+    "Telephone Company",
+    "Spectrum"
+  ],
+  "power_keywords": [
+    "Primary",
+    "Secondary",
+    "Neutral",
+    "Secondary Drip Loop",
+    "Riser",
+    "Transformer"
+  ],
+  "ignore_scid_keywords": [
+    "AT&T",
+    "Foreign Pole",
+    "Unknown",
+    "MVEC"
+  ],
+  "telecom_keywords": {
+    "Proposed MetroNet": [
+      "MetroNet",
+      "MNT",
+      "Proposed MNT"
+    ],
+    "CATV": [
+      "CATV"
+    ]
+  },
+  "output_settings": {
+    "header_row": 7,
+    "data_start_row": 8,
+    "worksheet_name": "TEST"
+  },
+  "processing_options": {
+    "use_geocoding": true,
+    "open_output": true,
+    "debug_mode": false,
+    "use_decimal_format": false,
+    "use_qc_routing": false,
+    "span_length_tolerance": 3
+  },
+  "manual_routes_options": {
+    "use_manual_routes": false,
+    "clear_existing_routes": false
+  },
+  "column_mappings": [
+    [
+      "Pole",
+      "Number",
+      "Pole #"
+    ],
+    [
+      "Pole",
+      "Latitude",
+      "Latitude"
+    ],
+    [
+      "Pole",
+      "Longitude",
+      "Longitude"
+    ],
+    [
+      "Power",
+      "Lowest Height",
+      "Lowest Power (LP)"
+    ],
+    [
+      "comm1",
+      "Attachment Ht",
+      "Comm 1 HOA"
+    ],
+    [
+      "comm1",
+      "Midspan Ht",
+      "Comm 1 MS"
+    ],
+    [
+      "comm2",
+      "Attachment Ht",
+      "Comm 2 HOA"
+    ],
+    [
+      "comm2",
+      "Midspan Ht",
+      "Comm 2 MS"
+    ],
+    [
+      "comm3",
+      "Attachment Ht",
+      "Comm 3 HOA"
+    ],
+    [
+      "comm3",
+      "Midspan Ht",
+      "Comm 3 MS"
+    ],
+    [
+      "comm4",
+      "Attachment Ht",
+      "Comm 4 HOA"
+    ],
+    [
+      "comm4",
+      "Midspan Ht",
+      "Comm 4 MS"
+    ],
+    [
+      "Proposed MetroNet",
+      "Attachment Ht",
+      "MetroNet HOA"
+    ],
+    [
+      "Proposed MetroNet",
+      "Midspan Ht",
+      "MetroNet MS"
+    ],
+    [
+      "New Guy",
+      "Size",
+      "Guy Size"
+    ],
+    [
+      "New Guy",
+      "Lead",
+      "Guy Lead"
+    ],
+    [
+      "New Guy",
+      "Direction",
+      "Guy Direction"
+    ],
+    [
+      "Telephone Company",
+      "Attachment Ht",
+      "Telephone Company"
+    ],
+    [
+      "Pole",
+      "Height & Class",
+      "Pole Height/Class"
+    ],
+    [
+      "Pole",
+      "MR Notes",
+      "Make Ready Comments"
+    ]
+  ]
+}
