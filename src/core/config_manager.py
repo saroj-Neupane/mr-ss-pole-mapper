@@ -15,7 +15,7 @@ class ConfigManager:
     
     def get_default_config(self):
         return {
-            "power_company": "Xcel",
+            "power_company": "CONSUMERS",
             "telecom_providers": [
                 "Proposed MetroNet", "Lightower", "Comcast", "Verizon", 
                 "AT&T", "CATV", "Telephone Company", "Fiber"
@@ -38,7 +38,7 @@ class ConfigManager:
                 "use_qc_routing": False
             },
             "tension_calculator": {
-                "file_path": "Test Files/Metronet tension calculator.xlsm",
+                "file_path": "",
                 "worksheet_name": "Calculations"
             },
             "manual_routes_options": {
