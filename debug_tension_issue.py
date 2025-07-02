@@ -1,5 +1,6 @@
 from src.core.tension_calculator_com import TensionCalculatorCOM
 import logging
+from pathlib import Path
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +16,21 @@ def convert_feet_inches(measurement):
     return feet + (inches / 12.0)
 
 def test_tension_calculation():
-    calculator = TensionCalculatorCOM()
+    # Check if the file exists
+    calculator_path = Path("Test_Files/Metronet tension calculator.xlsm")
+    logging.info(f"Checking if calculator file exists: {calculator_path}")
+    logging.info(f"Absolute path: {calculator_path.absolute()}")
+    logging.info(f"File exists: {calculator_path.exists()}")
+    
+    # List contents of Test_Files directory
+    test_files_dir = Path("Test_Files")
+    if test_files_dir.exists():
+        logging.info(f"Contents of {test_files_dir}:")
+        for file in test_files_dir.iterdir():
+            logging.info(f"  {file.name}")
+    
+    # Use the correct path to the tension calculator file
+    calculator = TensionCalculatorCOM("Test_Files/Metronet tension calculator.xlsm")
     
     # Test case from screenshot (pole 003)
     span_length = 100  # feet

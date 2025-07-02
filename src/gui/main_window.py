@@ -143,6 +143,7 @@ class PoleMapperApp:
                 "attachment_file": abs_path(self.attachment_var.get() if hasattr(self, 'attachment_var') else ""),
                 "output_file": abs_path(self.output_var.get() if hasattr(self, 'output_var') else ""),
                 "qc_file": abs_path(self.qc_var.get() if hasattr(self, 'qc_var') else ""),
+                "tension_calculator_file": abs_path(self.tension_calculator_var.get() if hasattr(self, 'tension_calculator_var') else ""),
                 "last_directory": getattr(self, 'last_directory', str(Path.home())),
                 "last_config": getattr(self, 'current_config_name', "Default"),
                 "last_manual_routes": self.route_text.get(1.0, END).strip() if hasattr(self, 'route_text') else ""

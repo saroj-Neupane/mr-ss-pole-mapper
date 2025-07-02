@@ -23,9 +23,38 @@ class PoleDataProcessor:
         self.qc_reader = qc_reader
         # Initialize tension calculator with configuration
         tension_config = self.config.get("tension_calculator", {})
-        calculator_file_path = tension_config.get("file_path", "Test Files/Metronet tension calculator.xlsm")
+        calculator_file_path = tension_config.get("file_path", "")
         worksheet_name = tension_config.get("worksheet_name", "Calculations")
-        self.tension_calculator = TensionCalculatorCOM(calculator_file_path, worksheet_name)
+        
+        # Try COM-based calculator first, fall back to openpyxl-based if it fails
+        try:
+            self.tension_calculator = TensionCalculatorCOM(calculator_file_path, worksheet_name)
+            # Test if it can initialize
+            if calculator_file_path:
+                test_result = self.tension_calculator.calculate_tension(100.0, 26.33, 25.0)
+                if test_result is None:
+                    logging.warning("COM-based tension calculator failed to initialize, trying openpyxl fallback")
+                    from .tension_calculator import TensionCalculator
+                    self.tension_calculator = TensionCalculator(calculator_file_path, worksheet_name)
+                else:
+                    logging.info("COM-based tension calculator initialized successfully")
+            else:
+                logging.info("No tension calculator file specified, tension calculation will be skipped")
+        except Exception as e:
+            logging.warning(f"COM-based tension calculator failed: {e}, trying openpyxl fallback")
+            try:
+                from .tension_calculator import TensionCalculator
+                self.tension_calculator = TensionCalculator(calculator_file_path, worksheet_name)
+                logging.info("Openpyxl-based tension calculator initialized successfully")
+            except Exception as e2:
+                logging.error(f"Both tension calculators failed: {e2}")
+                # Create a dummy calculator that always returns None
+                class DummyTensionCalculator:
+                    def calculate_tension(self, *args, **kwargs):
+                        return None
+                    def cleanup(self):
+                        pass
+                self.tension_calculator = DummyTensionCalculator()
     
     def process_data(self, nodes_df, connections_df, sections_df, progress_callback=None, 
                     manual_routes=None, clear_existing_routes=False):

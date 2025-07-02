@@ -59,7 +59,7 @@
     "worksheet_name": "Consumers pg1"
   },
   "processing_options": {
-    "use_geocoding": false,
+    "use_geocoding": true,
     "open_output": true,
     "debug_mode": false,
     "use_decimal_format": false,

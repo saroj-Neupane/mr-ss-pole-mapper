@@ -10,7 +10,7 @@ from .utils import Utils
 class TensionCalculator:
     """Handles tension calculations using the Excel calculator file"""
     
-    def __init__(self, calculator_file_path="Test Files/Metronet tension calculator.xlsm", worksheet_name="Calculations"):
+    def __init__(self, calculator_file_path="Test_Files/Metronet tension calculator.xlsm", worksheet_name="Calculations"):
         self.calculator_file_path = Path(calculator_file_path)
         self.worksheet_name = worksheet_name
         
@@ -35,6 +35,11 @@ class TensionCalculator:
             float: Calculated tension value, or None if calculation fails
         """
         try:
+            # Check if calculator file path is valid
+            if not self.calculator_file_path or not self.calculator_file_path.exists():
+                logging.warning(f"Tension calculator file not found or invalid: {self.calculator_file_path}")
+                return None
+            
             # Ensure span length is numeric
             span_length = float(str(span_length).replace("'", "").replace('"', "").strip())
 
@@ -57,11 +62,6 @@ class TensionCalculator:
             logging.info(f"  - Midspan Height: {midspan_height}' (raw: {midspan_height})")
             logging.info(f"  - Calculated Span Sag: {span_sag}' (attachment - midspan)")
             logging.info(f"  - Cable Installation: {cable_installation}' (same as attachment)")
-            
-            # Check if calculator file exists
-            if not self.calculator_file_path.exists():
-                logging.error(f"Tension calculator file not found: {self.calculator_file_path}")
-                return None
             
             # Create a temporary copy of the calculator file to avoid modifying the original
             with tempfile.NamedTemporaryFile(suffix='.xlsm', delete=False) as temp_file:

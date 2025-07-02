@@ -21,7 +21,7 @@ except ImportError:
 class TensionCalculatorCOM:
     """Handles tension calculations using Excel COM automation"""
     
-    def __init__(self, calculator_file_path="Test Files/Metronet tension calculator.xlsm", worksheet_name="Calculations"):
+    def __init__(self, calculator_file_path="", worksheet_name="Calculations"):
         self.calculator_file_path = Path(calculator_file_path)
         self.worksheet_name = worksheet_name
         
@@ -52,6 +52,11 @@ class TensionCalculatorCOM:
         if not COM_AVAILABLE:
             logging.error("COM automation not available - cannot initialize Excel")
             return False
+        
+        # Check if calculator file path is valid
+        if not self.calculator_file_path or not self.calculator_file_path.exists():
+            logging.warning(f"Tension calculator file not found or invalid: {self.calculator_file_path}")
+            return False
             
         try:
             if self._excel_app is None:
@@ -71,23 +76,61 @@ class TensionCalculatorCOM:
                     self._excel_app = win32.Dispatch("Excel.Application")
                     logging.info("Created new Excel instance")
                 
+                # Test if we can access the Workbooks collection
+                try:
+                    test_workbooks = self._excel_app.Workbooks
+                    logging.info("Excel Workbooks collection is accessible")
+                except Exception as e:
+                    logging.error(f"Excel Workbooks collection not accessible: {e}")
+                    logging.error("Excel COM automation is not working properly. This may be due to:")
+                    logging.error("1. Excel running in restricted mode")
+                    logging.error("2. Permission issues with COM automation")
+                    logging.error("3. Excel running as a different user")
+                    self.cleanup()
+                    return False
+                
                 # Configure the Excel instance to be hidden and non-interactive
-                self._excel_app.Visible = False
-                self._excel_app.DisplayAlerts = False
-                self._excel_app.EnableEvents = False  # Disable events for speed
-                self._excel_app.ScreenUpdating = False  # Disable screen updates
+                try:
+                    self._excel_app.Visible = False
+                except Exception as e:
+                    logging.warning(f"Could not set Excel.Visible: {e}")
+                try:
+                    self._excel_app.DisplayAlerts = False
+                except Exception as e:
+                    logging.warning(f"Could not set Excel.DisplayAlerts: {e}")
+                try:
+                    self._excel_app.EnableEvents = False  # Disable events for speed
+                except Exception as e:
+                    logging.warning(f"Could not set Excel.EnableEvents: {e}")
+                try:
+                    self._excel_app.ScreenUpdating = False  # Disable screen updates
+                except Exception as e:
+                    logging.warning(f"Could not set Excel.ScreenUpdating: {e}")
                 
                 # Open workbook
-                self._workbook = self._excel_app.Workbooks.Open(str(self._temp_path.absolute()))
+                try:
+                    self._workbook = self._excel_app.Workbooks.Open(str(self._temp_path.absolute()))
+                    logging.info("Successfully opened calculator workbook")
+                except Exception as e:
+                    logging.error(f"Failed to open calculator workbook: {e}")
+                    self.cleanup()
+                    return False
                 
                 # Get worksheet
-                for ws in self._workbook.Worksheets:
-                    if ws.Name == self.worksheet_name:
-                        self._worksheet = ws
-                        break
-                        
-                if not self._worksheet:
-                    raise ValueError(f"Worksheet '{self.worksheet_name}' not found")
+                try:
+                    for ws in self._workbook.Worksheets:
+                        if ws.Name == self.worksheet_name:
+                            self._worksheet = ws
+                            break
+                            
+                    if not self._worksheet:
+                        raise ValueError(f"Worksheet '{self.worksheet_name}' not found")
+                    
+                    logging.info(f"Successfully accessed worksheet: {self.worksheet_name}")
+                except Exception as e:
+                    logging.error(f"Failed to access worksheet '{self.worksheet_name}': {e}")
+                    self.cleanup()
+                    return False
                 
                 self._is_initialized = True
                 logging.info("Excel instance initialized successfully")
@@ -101,8 +144,12 @@ class TensionCalculatorCOM:
 
     def calculate_tension(self, span_length, attachment_height, midspan_height):
         """Calculate tension for a single set of measurements"""
-        self._ensure_initialized()
-        return self._calculate_single_tension(span_length, attachment_height, midspan_height)
+        try:
+            self._ensure_initialized()
+            return self._calculate_single_tension(span_length, attachment_height, midspan_height)
+        except RuntimeError as e:
+            logging.warning(f"Tension calculation skipped: {e}")
+            return None
 
     def _calculate_single_tension(self, span_length, attachment_height, midspan_height):
         """Internal method to calculate a single tension value"""
@@ -215,7 +262,12 @@ class TensionCalculatorCOM:
         Returns:
             List of calculated tension values
         """
-        self._ensure_initialized()
+        try:
+            self._ensure_initialized()
+        except RuntimeError as e:
+            logging.warning(f"Tension calculation skipped: {e}")
+            return [None] * len(provider_data_list)
+        
         results = []
         
         for provider_data, span_length in provider_data_list:
