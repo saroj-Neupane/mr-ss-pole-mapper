@@ -59,7 +59,7 @@
     "worksheet_name": "Consumers pg1"
   },
   "processing_options": {
-    "use_geocoding": true,
+    "use_geocoding": false,
     "open_output": true,
     "debug_mode": false,
     "use_decimal_format": false,
@@ -67,7 +67,7 @@
     "span_length_tolerance": 2.0
   },
   "tension_calculator": {
-    "file_path": "",
+    "file_path": "C:/Users/nsaro/Desktop/Projects Python/MR SS App V3/mr-ss-pole-mapper/Test_Files/Metronet tension calculator.xlsm",
     "worksheet_name": "Calculations"
   },
   "manual_routes_options": {

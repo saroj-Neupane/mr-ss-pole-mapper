@@ -62,18 +62,14 @@ class PoleDataProcessor:
         mappings = self._create_mappings(nodes_df, filtered)
         
         if progress_callback:
-            progress_callback(50, "Building connections...")
+            if not progress_callback(50, "Building connections..."):
+                return []  # Stop processing if requested
         
         # Build temp rows
         temp_rows = self._build_temp_rows(connections_df, mappings, manual_routes, clear_existing_routes)
         
-        # If manual routes are used, only keep poles defined in those routes
-        if manual_routes:
-            manual_scids = {scid for route in manual_routes for scid in route['poles']}
-            temp_rows = {scid: data for scid, data in temp_rows.items() if scid in manual_scids}
-        
         # If QC file is active, only keep poles mentioned in QC file
-        elif self.qc_reader and self.qc_reader.is_active():
+        if self.qc_reader and self.qc_reader.is_active():
             qc_scids = self.qc_reader.get_qc_scids()
             original_count = len(temp_rows)
             temp_rows = {scid: data for scid, data in temp_rows.items() if scid in qc_scids}
@@ -83,7 +79,8 @@ class PoleDataProcessor:
                 logging.warning("No poles found after QC filtering - check that QC SCIDs match pole SCIDs in data")
         
         if progress_callback:
-            progress_callback(70, "Processing connections...")
+            if not progress_callback(70, "Processing connections..."):
+                return []  # Stop processing if requested
 
         # Process connections to generate output rows (one row per connection involving a pole)
         result_data = []
@@ -98,6 +95,15 @@ class PoleDataProcessor:
             # Process each connection and generate rows (optimized logic)
             result_data = self._process_standard_connections(connections_df, mappings, sections_df)
         
+        # Filter results based on manual routes if specified
+        if manual_routes:
+            manual_scids = {scid for route in manual_routes for scid in route['poles']}
+            logging.info(f"Filtering results to manual route SCIDs: {sorted(manual_scids)}")
+            
+            original_count = len(result_data)
+            result_data = [row for row in result_data if row.get('Pole') in manual_scids]
+            logging.info(f"Manual route filtering: reduced from {original_count} to {len(result_data)} rows")
+        
         # Sort result by pole SCID (unless QC file is active, then preserve QC order)
         if self.qc_reader and self.qc_reader.is_active():
             # QC file is active - result_data is already in QC order, don't sort
@@ -107,10 +113,13 @@ class PoleDataProcessor:
             result_data.sort(key=lambda x: Utils.extract_numeric_part(x.get('Pole', '')))
         
         if progress_callback:
-            progress_callback(90, f"Generated {len(result_data)} output rows")
+            if not progress_callback(90, f"Generated {len(result_data)} output rows"):
+                return []  # Stop processing if requested
         
         return result_data
+    
 
+    
     def _create_mappings(self, nodes_df, filtered):
         """Create various lookup mappings"""
         return {

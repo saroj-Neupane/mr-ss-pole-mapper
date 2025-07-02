@@ -62,8 +62,16 @@ class TensionCalculatorCOM:
                 # Copy calculator file to temp location
                 shutil.copy2(self.calculator_file_path, self._temp_path)
                 
-                # Initialize Excel
-                self._excel_app = win32.Dispatch("Excel.Application")
+                # Try to get existing Excel instance first
+                try:
+                    self._excel_app = win32.GetActiveObject("Excel.Application")
+                    logging.info("Using existing Excel instance")
+                except:
+                    # If no existing instance, create a new one
+                    self._excel_app = win32.Dispatch("Excel.Application")
+                    logging.info("Created new Excel instance")
+                
+                # Configure the Excel instance to be hidden and non-interactive
                 self._excel_app.Visible = False
                 self._excel_app.DisplayAlerts = False
                 self._excel_app.EnableEvents = False  # Disable events for speed
@@ -245,19 +253,25 @@ class TensionCalculatorCOM:
         return results
 
     def cleanup(self):
-        """Clean up Excel resources"""
+        """Clean up Excel resources - only close workbook, don't quit Excel"""
         try:
+            # Close workbook only - don't quit Excel application
             if self._workbook:
-                self._workbook.Close(SaveChanges=False)
-            if self._excel_app:
-                self._excel_app.Quit()
+                try:
+                    self._workbook.Close(SaveChanges=False)
+                    logging.info("Calculator workbook closed successfully")
+                except Exception as e:
+                    logging.warning(f"Error closing workbook: {str(e)}")
+                finally:
+                    self._workbook = None
+                    self._worksheet = None
+                
         except Exception as e:
             logging.error(f"Error during cleanup: {str(e)}")
         finally:
-            self._workbook = None
             self._worksheet = None
-            self._excel_app = None
             self._is_initialized = False
+            self._excel_app = None  # Clear reference but don't quit
             
             # Clean up temporary file
             if self._temp_path:
@@ -269,7 +283,19 @@ class TensionCalculatorCOM:
     
     def __del__(self):
         """Ensure cleanup on object destruction"""
-        self.cleanup()
+        try:
+            self.cleanup()
+        except:
+            pass  # Ignore errors during destruction
+
+    @contextmanager
+    def excel_context(self):
+        """Context manager for Excel operations with automatic cleanup"""
+        try:
+            self._ensure_initialized()
+            yield self
+        finally:
+            self.cleanup()
 
     def _parse_height_value(self, value):
         """Parse height value from various formats including feet'inches" """

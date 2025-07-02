@@ -55,6 +55,11 @@ class PoleMapperApp:
             # Load saved config
             self.load_config()
             
+            # Initialize processing control variables
+            self.processing_thread = None
+            self.stop_processing = False
+            self.process_button = None
+            
             # Create GUI
             self.create_widgets()
             self.geocoder = None
@@ -65,6 +70,12 @@ class PoleMapperApp:
             # Set initial UI state and values
             self.update_ui_values()
             self.update_ui_state()
+            
+            # Setup auto-save
+            self.auto_save_config()
+            
+            # Setup exception handling
+            sys.excepthook = self.global_exception_handler
             
             logging.info("Pole Mapper application initialized successfully")
             
@@ -870,8 +881,9 @@ PROCESSING:
         self.create_processing_options(left_frame)
         
         # Process button
-        ttk.Button(left_frame, text="Process Files", command=self.process_files,
-                  style="Accent.TButton").pack(pady=20)
+        self.process_button = ttk.Button(left_frame, text="Process Files", command=self.process_files,
+                  style="Accent.TButton")
+        self.process_button.pack(pady=20)
         
         # Progress
         self.create_progress_section(left_frame)
@@ -1106,6 +1118,13 @@ PROCESSING:
     def process_files(self):
         """Process the selected files"""
         try:
+            # If already processing, stop the process
+            if self.processing_thread and self.processing_thread.is_alive():
+                self.stop_processing = True
+                if self.process_button:
+                    self.process_button.config(text="Stopping...", state="disabled")
+                return
+
             # Get all paths from UI StringVars
             input_path = self.input_var.get()
             attachment_path = self.attachment_var.get()
@@ -1118,59 +1137,120 @@ PROCESSING:
                 messagebox.showerror("Missing Files", "Please provide paths for the Main Input, Attachment Data, and Output Template files.")
                 return
 
+            # Reset stop flag and update UI
+            self.stop_processing = False
+            if self.process_button:
+                self.process_button.config(text="STOP", state="normal")
             self.log_text.delete(1.0, END)
 
             def progress_callback(percentage, message):
+                # Check if stop was requested
+                if self.stop_processing:
+                    return False  # Signal to stop processing
+                
                 self.progress_var.set(message)
                 self.progress_bar['value'] = percentage
                 self.root.update_idletasks()
+                return True  # Continue processing
 
             # Pass paths explicitly to the worker thread
-            thread = threading.Thread(
+            self.processing_thread = threading.Thread(
                 target=self._process_files_worker,
                 args=(progress_callback, input_path, attachment_path, output_path, qc_path, tension_path)
             )
-            thread.daemon = True
-            thread.start()
+            self.processing_thread.daemon = True
+            self.processing_thread.start()
 
         except Exception as e:
             logging.error(f"Error starting file processing: {e}")
+            self.reset_process_button()
+
+    def request_stop(self):
+        """Stop the current processing operation"""
+        if self.processing_thread and self.processing_thread.is_alive():
+            self.stop_processing = True
+            self.process_button.config(text="Stopping...", state="disabled")
+            logging.info("Stop request sent - waiting for processing to complete...")
+
+    def reset_process_button(self):
+        """Reset the process button to its initial state"""
+        if self.process_button:
+            self.process_button.config(text="Process Files", state="normal")
+        self.processing_thread = None
+        self.stop_processing = False
 
     def _process_files_worker(self, progress_callback, input_file, attachment_file, output_file, qc_file, tension_file):
         """Process files in a background thread."""
         try:
-            progress_callback(0, "Starting processing...")
+            import pandas as pd
+            
+            # Check for stop request before starting
+            if not progress_callback(0, "Starting processing..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
 
             # Immediately update the main config with the tension file path from the UI
-            # This ensures the processor is initialized with the correct path.
             self.config['tension_calculator']['file_path'] = tension_file
             self.update_config_from_ui()
 
-            progress_callback(10, "Reading main input file...")
+            # --- Manual Route Optimization ---
+            manual_routes = None
+            manual_scids = set()
+            if self.use_manual_routes_var.get():
+                if not progress_callback(5, "Parsing manual routes..."):
+                    logging.info("Processing stopped by user request")
+                    self.root.after(0, self.reset_process_button)
+                    return
+                route_text = self.route_text.get(1.0, END).strip()
+                if route_text:
+                    ignore_keywords = self.config.get("ignore_scid_keywords", [])
+                    manual_routes = RouteParser.parse_manual_routes(route_text, ignore_keywords)
+                    manual_scids = {scid for route in manual_routes for scid in route['poles']}
+                    logging.info(f"Parsed {len(manual_routes)} manual routes with {len(manual_scids)} unique poles")
+
+            if not progress_callback(10, "Reading main input file..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             nodes_df = pd.read_excel(input_file, sheet_name='nodes', dtype=str).fillna("")
             connections_df = pd.read_excel(input_file, sheet_name='connections', dtype=str).fillna("")
             sections_df = pd.read_excel(input_file, sheet_name='sections', dtype=str).fillna("")
-            
+
+
+
             logging.info(f"Read {len(nodes_df)} nodes, {len(connections_df)} connections, {len(sections_df)} sections")
-            
-            progress_callback(15, "Extracting valid SCIDs...")
+
+            if not progress_callback(15, "Extracting valid SCIDs..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             from core.utils import Utils
             nodes_df_copy = nodes_df.copy()
             ignore_keywords = self.config.get("ignore_scid_keywords", [])
             nodes_df_copy['scid'] = nodes_df_copy['scid'].apply(lambda x: Utils.normalize_scid(x, ignore_keywords))
             valid_nodes = Utils.filter_valid_nodes(nodes_df_copy)
             valid_scids = valid_nodes['scid'].tolist()
-            
+
             logging.info(f"Found {len(valid_scids)} valid SCIDs for attachment processing")
-            
-            progress_callback(20, "Initializing geocoder...")
+
+            if not progress_callback(20, "Initializing geocoder..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             use_geocoding = self.geocoding_var.get()
             geocoder = Geocoder(self.cache_file, use_geocoding=use_geocoding)
-            
-            progress_callback(25, "Reading attachment data...")
+
+            if not progress_callback(25, "Reading attachment data..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             attachment_reader = AttachmentDataReader(attachment_file, config=self.config, valid_scids=valid_scids)
-            
-            progress_callback(27, "Processing QC file...")
+
+            if not progress_callback(27, "Processing QC file..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             qc_reader = None
             if qc_file and qc_file.strip():
                 try:
@@ -1188,9 +1268,12 @@ PROCESSING:
                     qc_reader = None
             else:
                 logging.info("No QC file provided - processing all connections")
-            
-            progress_callback(30, "Initializing data processor...")
-            
+
+            if not progress_callback(30, "Initializing data processor..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
+
             processor = PoleDataProcessor(
                 config=self.config,
                 geocoder=geocoder,
@@ -1198,17 +1281,12 @@ PROCESSING:
                 attachment_reader=attachment_reader,
                 qc_reader=qc_reader
             )
-              # Parse manual routes if enabled
-            manual_routes = None
-            if self.use_manual_routes_var.get():
-                progress_callback(35, "Parsing manual routes...")
-                route_text = self.route_text.get(1.0, END).strip()
-                if route_text:
-                    ignore_keywords = self.config.get("ignore_scid_keywords", [])
-                    manual_routes = RouteParser.parse_manual_routes(route_text, ignore_keywords)
-                    logging.info(f"Parsed {len(manual_routes)} manual routes")
-              # Process data
-            progress_callback(40, "Processing pole data...")
+
+            # Process data
+            if not progress_callback(40, "Processing pole data..."):
+                logging.info("Processing stopped by user request")
+                self.root.after(0, self.reset_process_button)
+                return
             result_data = processor.process_data(
                 nodes_df=nodes_df,
                 connections_df=connections_df,
@@ -1217,7 +1295,7 @@ PROCESSING:
                 manual_routes=manual_routes,
                 clear_existing_routes=False
             )
-            
+
             # Extract job name from nodes_df
             progress_callback(85, "Generating output file...")
             job_name = ""
@@ -1225,13 +1303,18 @@ PROCESSING:
                 job_name = str(nodes_df["job_name"].iloc[0]).strip()
             if not job_name:
                 job_name = "Output"
-                
+
             # Generate actual output file by copying template with job name
             actual_output_file = self.generate_output_file(job_name, output_file)
             if not actual_output_file:
                 progress_callback(0, "Failed to generate output file!")
                 return
             
+            # Check if a unique filename was generated (indicates original file was open)
+            if "_" in actual_output_file.name and any(char.isdigit() for char in actual_output_file.name.split("_")[-1]):
+                unique_filename_message = f"Original file was open in another application.\nGenerated unique filename: {actual_output_file.name}"
+                self.root.after(0, lambda: messagebox.showinfo("Unique Filename Generated", unique_filename_message))
+
             # Write output to the newly created file
             if qc_reader and qc_reader.is_active():
                 progress_callback(90, "Writing output file and populating QC sheet...")
@@ -1239,29 +1322,35 @@ PROCESSING:
             else:
                 progress_callback(90, "Writing output file...")
                 processor.write_output(result_data, str(actual_output_file))
-            
+
             progress_callback(100, "Processing complete!")
             logging.info(f"Processing complete. Output written to: {actual_output_file}")
-            
+
             # Save last paths
             self.save_last_paths()
-            
+
             # Open output file if requested
             if self.open_output_var.get():
                 self.root.after(1000, lambda: self.open_output_file(str(actual_output_file)))
-            
+
             # Log success message
             logging.info(f"Processing completed successfully! Processed {len(result_data)} poles. Output saved to: {actual_output_file}")
-                
+            
+            # Reset button on completion
+            self.root.after(0, self.reset_process_button)
+
         except Exception as e:
             logging.error(f"Error during processing: {e}", exc_info=True)
             logging.error(f"An error occurred during processing: {e}")
             progress_callback(0, "Processing failed!")
+            # Reset button on error
+            self.root.after(0, self.reset_process_button)
 
     def generate_output_file(self, job_name, output_template):
         """Generate actual output file by copying the template using job_name."""
         import shutil
         from pathlib import Path
+        import time
         
         template_path = Path(output_template)
         if not template_path.exists():
@@ -1270,16 +1359,51 @@ PROCESSING:
             
         # Preserve the original file extension (.xlsx or .xlsm)
         template_extension = template_path.suffix
-        actual_output_file = template_path.parent / f"{job_name} Spread Sheet{template_extension}"
+        base_filename = f"{job_name} Spread Sheet{template_extension}"
+        
+        # Try to find an available filename
+        counter = 0
+        actual_output_file = template_path.parent / base_filename
+        
+        while actual_output_file.exists():
+            counter += 1
+            if counter == 1:
+                # First attempt: try with timestamp
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                actual_output_file = template_path.parent / f"{job_name} Spread Sheet_{timestamp}{template_extension}"
+            else:
+                # Subsequent attempts: try with counter
+                actual_output_file = template_path.parent / f"{job_name} Spread Sheet_{counter}{template_extension}"
+            
+            # Prevent infinite loop
+            if counter > 100:
+                logging.error(f"Could not find available filename after 100 attempts")
+                return None
+        
         logging.info(f"Generated output file path: {actual_output_file}")
         
         try:
             shutil.copy(template_path, actual_output_file)
             logging.info(f"Successfully copied template to: {actual_output_file}")
             return actual_output_file
+        except PermissionError as e:
+            # File is likely open in Excel or another application
+            logging.warning(f"Permission denied - file may be open in another application: {actual_output_file}")
+            
+            # Try with a unique timestamp
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            unique_filename = f"{job_name} Spread Sheet_{timestamp}{template_extension}"
+            actual_output_file = template_path.parent / unique_filename
+            
+            try:
+                shutil.copy(template_path, actual_output_file)
+                logging.info(f"Successfully copied template to unique filename: {actual_output_file}")
+                return actual_output_file
+            except Exception as e2:
+                logging.error(f"Failed to copy template even with unique filename: {e2}")
+                return None
         except Exception as e:
             logging.error(f"Error copying template file: {e}")
-            logging.error(f"Failed to copy template file: {e}")
             return None
 
     def open_output_file(self, filepath):
