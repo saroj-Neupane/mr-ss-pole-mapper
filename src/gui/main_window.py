@@ -414,6 +414,18 @@ PROCESSING:
         power_kw_frame.pack(fill=X, pady=(0, 10), padx=5)
         self.create_list_editor(power_kw_frame, "power_keywords")
         
+        # Communication Keywords
+        comm_kw_frame = ttk.LabelFrame(self.scrollable_left_frame, text="Communication Keywords", padding=15)
+        comm_kw_frame.pack(fill=X, pady=(0, 10), padx=5)
+        
+        # Add help text for communication keywords
+        comm_help_text = ttk.Label(comm_kw_frame, 
+                                  text="Keywords used to identify communication attachments in attachment data.\nThese are matched against the 'measured' and 'company' columns.",
+                                  foreground="gray", font=("TkDefaultFont", 8))
+        comm_help_text.pack(anchor=W, pady=(0, 5))
+        
+        self.create_list_editor(comm_kw_frame, "comm_keywords")
+        
         # Ignore SCID Keywords
         ignore_scid_frame = ttk.LabelFrame(self.scrollable_left_frame, text="Ignore SCID Keywords", padding=15)
         ignore_scid_frame.pack(fill=X, pady=(0, 10), padx=5)

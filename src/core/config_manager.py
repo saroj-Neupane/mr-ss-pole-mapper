@@ -34,6 +34,18 @@ class ConfigManager:
                 "Riser",
                 "Transformer"               
             ],
+            "comm_keywords": [
+                "catv com",
+                "telco com", 
+                "fiber optic com",
+                "insulator",
+                "power guy",
+                "catv",
+                "telco",
+                "fiber",
+                "communication",
+                "comm"
+            ],
             "ignore_scid_keywords": [
                 "AT&T",
                 "Unknown",

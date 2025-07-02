@@ -14,6 +14,18 @@
     "Secondary Drip Loop",
     "Riser"
   ],
+  "comm_keywords": [
+    "catv com",
+    "telco com", 
+    "fiber optic com",
+    "insulator",
+    "power guy",
+    "catv",
+    "telco",
+    "fiber",
+    "communication",
+    "comm"
+  ],
   "telecom_keywords": {
     "Proposed MetroNet": [
       "Proposed MNT",

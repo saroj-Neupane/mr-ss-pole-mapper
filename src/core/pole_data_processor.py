@@ -795,8 +795,8 @@ class PoleDataProcessor:
             # Process ALL communication attachments from raw SCID data directly (unified approach)
             raw_scid_data = self.attachment_reader.get_scid_data(scid)
             if not raw_scid_data.empty:
-                # Look for ALL communication-related entries
-                comm_keywords = ['catv', 'telco', 'fiber', 'insulator', 'power guy', 'communication', 'comm']
+                # Look for ALL communication-related entries using configurable keywords
+                comm_keywords = self.config.get("comm_keywords", ['catv com', 'telco com', 'fiber optic com', 'insulator', 'power guy', 'communication', 'comm'])
                 processed_attachments = {}  # Track by provider for provider-specific fields
                 
                 for _, row in raw_scid_data.iterrows():
@@ -1002,7 +1002,7 @@ class PoleDataProcessor:
         
         # Updated filter to include expanded communication keywords
         # Include: 'CATV Com', 'Telco Com', 'Fiber Optic Com', 'insulator', 'Power Guy'
-        keywords = ['catv com', 'telco com', 'fiber optic com', 'insulator', 'power guy', 'catv', 'telco', 'fiber', 'communication', 'comm']
+        keywords = self.config.get("comm_keywords", ['catv com', 'telco com', 'fiber optic com', 'insulator', 'power guy', 'catv', 'telco', 'fiber', 'communication', 'comm'])
         keyword_filtered = [x for x in filtered_telecom_data if any(kw in str(x[2]).lower() for kw in keywords)]
         
         # If keyword matches are present, use them; otherwise, use the full filtered list

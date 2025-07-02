@@ -141,12 +141,11 @@ class AttachmentDataReader:
                 
                 company_regex = r'\b(?:' + '|'.join(re.escape(k.lower()) for k in clean_keywords) + r')\b'
                 
-                # Updated keywords for communication attachment selection
+                # Updated keywords for communication attachment selection using configurable keywords
                 # Include: 'CATV Com', 'Telco Com', 'Fiber Optic Com', 'insulator', 'Power Guy'
-                if provider.lower() == 'proposed metronet':
-                    measured_regex = r'(?i)(catv com|telco com|fiber optic com|insulator|power guy)'
-                else:
-                    measured_regex = r'(?i)(catv com|telco com|fiber optic com|insulator|power guy)'
+                comm_keywords = self.config.get("comm_keywords", ['catv com', 'telco com', 'fiber optic com', 'insulator', 'power guy'])
+                keyword_pattern = '|'.join([re.escape(kw.strip().lower()) for kw in comm_keywords])
+                measured_regex = r'(?i)(' + keyword_pattern + r')'
                 
                 # For "Power Guy" keyword, company name must be in company column, not measured column
                 if 'power guy' in measured_regex.lower():
