@@ -61,7 +61,9 @@ class PoleMapperApp:
             
             # Initialization complete - allow auto-saving
             self._is_initializing = False
-              # Set initial UI state
+            
+            # Set initial UI state and values
+            self.update_ui_values()
             self.update_ui_state()
             
             logging.info("Pole Mapper application initialized successfully")
@@ -79,7 +81,8 @@ class PoleMapperApp:
             "qc_file": "",
             "tension_calculator_file": "",
             "last_directory": str(Path.home()),
-            "last_config": "Default"
+            "last_config": "Default",
+            "last_manual_routes": ""
         }
         
         try:
@@ -130,7 +133,8 @@ class PoleMapperApp:
                 "output_file": abs_path(self.output_var.get() if hasattr(self, 'output_var') else ""),
                 "qc_file": abs_path(self.qc_var.get() if hasattr(self, 'qc_var') else ""),
                 "last_directory": getattr(self, 'last_directory', str(Path.home())),
-                "last_config": getattr(self, 'current_config_name', "Default")
+                "last_config": getattr(self, 'current_config_name', "Default"),
+                "last_manual_routes": self.route_text.get(1.0, END).strip() if hasattr(self, 'route_text') else ""
             }
             
             with open(self.paths_file, 'w') as f:
@@ -935,16 +939,27 @@ PROCESSING:
         self.route_text = ScrolledText(route_frame, height=4, font=("Consolas", 10))
         self.route_text.pack(fill=BOTH, expand=True)
         
+        # Initialize route text with content from last_paths or config
+        manual_routes_options = self.config.get("manual_routes_options", {})
+        # First try to load from last_paths (persistent across sessions)
+        last_manual_routes = self.last_paths.get("last_manual_routes", "")
+        # Then try to load from configuration (if different from last_paths)
+        config_route_text = manual_routes_options.get("route_text", "")
+        
+        # Use last_paths if it has content, otherwise use config
+        route_text_content = last_manual_routes if last_manual_routes else config_route_text
+        
+        if route_text_content:
+            self.route_text.insert(1.0, route_text_content)
+        
         # Route options
         route_options_frame = ttk.Frame(route_frame)
         route_options_frame.pack(fill=X, pady=(10, 0))
-        self.use_manual_routes_var = BooleanVar(value=False)
+        # Initialize with configuration values
+        manual_routes_options = self.config.get("manual_routes_options", {})
+        self.use_manual_routes_var = BooleanVar(value=manual_routes_options.get("use_manual_routes", False))
         ttk.Checkbutton(route_options_frame, text="Use manual routes", 
                        variable=self.use_manual_routes_var, command=self.toggle_route_text).pack(anchor=W)
-        
-        self.clear_routes_var = BooleanVar(value=False)
-        ttk.Checkbutton(route_options_frame, text="Clear existing route data", 
-                       variable=self.clear_routes_var).pack(anchor=W, pady=(5, 0))
         
         # Add traces for auto-saving
         def on_manual_routes_change(*args):
@@ -952,23 +967,28 @@ PROCESSING:
                 return
             self.auto_save_config()
         
-        def on_clear_routes_change(*args):
+        def on_route_text_change(event=None):
             if getattr(self, '_is_saving_config', False) or getattr(self, '_is_initializing', False):
                 return
+            # Save route text instantly to last_paths.json
+            self.save_last_paths()
+            # Also trigger regular auto-save for configuration
             self.auto_save_config()
         
         self.use_manual_routes_var.trace('w', on_manual_routes_change)
-        self.clear_routes_var.trace('w', on_clear_routes_change)
+        self.route_text.bind('<KeyRelease>', on_route_text_change)
 
     def create_processing_options(self, parent):
         """Create processing options section"""
         options_frame = ttk.LabelFrame(parent, text="Processing Options", padding=15)
         options_frame.pack(fill=X, pady=(0, 10))
         
-        self.geocoding_var = BooleanVar(value=True)
+        # Initialize with configuration values
+        processing_options = self.config.get("processing_options", {})
+        self.geocoding_var = BooleanVar(value=processing_options.get("use_geocoding", True))
         ttk.Checkbutton(options_frame, text="Use geocoding for addresses", variable=self.geocoding_var).pack(anchor=W)
         
-        self.open_output_var = BooleanVar(value=True)
+        self.open_output_var = BooleanVar(value=processing_options.get("open_output", False))
         ttk.Checkbutton(options_frame, text="Open output file when complete", variable=self.open_output_var).pack(anchor=W)
         
         # Span length tolerance setting
@@ -976,7 +996,8 @@ PROCESSING:
         tolerance_frame.pack(fill=X, pady=(10, 0))
         
         ttk.Label(tolerance_frame, text="Span Length Tolerance (ft):").pack(side=LEFT)
-        self.span_tolerance_var = StringVar(value="3")
+        tolerance = processing_options.get("span_length_tolerance", 3)
+        self.span_tolerance_var = StringVar(value=str(tolerance))
         tolerance_entry = ttk.Entry(tolerance_frame, textvariable=self.span_tolerance_var, width=10)
         tolerance_entry.pack(side=LEFT, padx=(10, 0))
         
@@ -1194,7 +1215,7 @@ PROCESSING:
                 sections_df=sections_df,
                 progress_callback=progress_callback,
                 manual_routes=manual_routes,
-                clear_existing_routes=self.clear_routes_var.get()
+                clear_existing_routes=False
             )
             
             # Extract job name from nodes_df
@@ -1356,6 +1377,9 @@ PROCESSING:
             if hasattr(self, 'geocoding_var'):
                 self.config["processing_options"]["use_geocoding"] = self.geocoding_var.get()
             
+            if hasattr(self, 'open_output_var'):
+                self.config["processing_options"]["open_output"] = self.open_output_var.get()
+            
             if hasattr(self, 'span_tolerance_var'):
                 try:
                     tolerance = float(self.span_tolerance_var.get())
@@ -1370,9 +1394,11 @@ PROCESSING:
                 
             if hasattr(self, 'use_manual_routes_var'):
                 self.config["manual_routes_options"]["use_manual_routes"] = self.use_manual_routes_var.get()
-                
-            if hasattr(self, 'clear_routes_var'):
-                self.config["manual_routes_options"]["clear_existing_routes"] = self.clear_routes_var.get()
+            
+            # Save route text content
+            if hasattr(self, 'route_text'):
+                route_text_content = self.route_text.get(1.0, END).strip()
+                self.config["manual_routes_options"]["route_text"] = route_text_content
             
             # Update tension calculator settings
             if not "tension_calculator" in self.config:
@@ -1424,6 +1450,8 @@ PROCESSING:
             processing_options = self.config.get("processing_options", {})
             if hasattr(self, 'geocoding_var'):
                 self.geocoding_var.set(processing_options.get("use_geocoding", False))
+            if hasattr(self, 'open_output_var'):
+                self.open_output_var.set(processing_options.get("open_output", False))
             
             if hasattr(self, 'span_tolerance_var'):
                 tolerance = processing_options.get("span_length_tolerance", 3)
@@ -1433,12 +1461,25 @@ PROCESSING:
             manual_routes_options = self.config.get("manual_routes_options", {})
             if hasattr(self, 'use_manual_routes_var'):
                 self.use_manual_routes_var.set(manual_routes_options.get("use_manual_routes", False))
-            if hasattr(self, 'clear_routes_var'):
-                self.clear_routes_var.set(manual_routes_options.get("clear_existing_routes", False))
             
             # Update route text state based on checkbox
             if hasattr(self, 'toggle_route_text'):
                 self.toggle_route_text()
+            
+            # Update manual routes text content
+            manual_routes_options = self.config.get("manual_routes_options", {})
+            if hasattr(self, 'route_text'):
+                # First try to load from last_paths (persistent across sessions)
+                last_manual_routes = self.last_paths.get("last_manual_routes", "")
+                # Then try to load from configuration (if different from last_paths)
+                config_route_text = manual_routes_options.get("route_text", "")
+                
+                # Use last_paths if it has content, otherwise use config
+                route_text_content = last_manual_routes if last_manual_routes else config_route_text
+                
+                self.route_text.delete(1.0, END)
+                if route_text_content:
+                    self.route_text.insert(1.0, route_text_content)
             
             # Update tension calculator settings
             tension_config = self.config.get("tension_calculator", {})
