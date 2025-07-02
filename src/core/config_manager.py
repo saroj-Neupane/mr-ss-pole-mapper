@@ -14,16 +14,61 @@ class ConfigManager:
         self.configs_dir.mkdir(exist_ok=True)
     
     def get_default_config(self):
+        """Get default configuration - hardcoded CONSUMERS.json values"""
         return {
-            "power_company": "CONSUMERS",
+            "power_company": "CONSUMERS ENERGY",
             "telecom_providers": [
-                "Proposed MetroNet", "Lightower", "Comcast", "Verizon", 
-                "AT&T", "CATV", "Telephone Company", "Fiber"
+                "Proposed MetroNet",
+                "Lightower",
+                "Comcast",
+                "Verizon",
+                "AT&T",
+                "Zayo",
+                "Jackson ISD"
             ],
-            "power_keywords": ["Primary", "Secondary", "Neutral", "Secondary Drip Loop", "Riser", "Transformer"],
-            "ignore_scid_keywords": ["AT&T", "Foreign Pole", "Unknown"],
+            "power_keywords": [
+                "Primary",
+                "Secondary",
+                "Neutral",
+                "Secondary Drip Loop",
+                "Riser",
+                "Transformer"               
+            ],
+            "ignore_scid_keywords": [
+                "AT&T",
+                "Unknown",
+                "POLE",
+                "FOREIGN"
+            ],
             "telecom_keywords": {
-                "Proposed MetroNet": ["MetroNet", "MNT", "Proposed MNT"]
+                "Proposed MetroNet": [
+                    "MetroNet",
+                    "MNT",
+                    "Proposed MNT"
+                ],
+                "AT&T": [
+                    "AT&T",
+                    "ATT"
+                ],
+                "Verizon": [
+                    "verizon",
+                    "Verizon"
+                ],
+                "Comcast": [
+                    "comcast",
+                    "Comcast"
+                ],
+                "Lightower": [
+                    "lightower",
+                    "Lightower"
+                ],
+                "Zayo": [
+                    "zayo",
+                    "Zayo"
+                ],
+                "Jackson ISD": [
+                    "JACKSON ISD"
+                ]
             },
             "output_settings": {
                 "header_row": 3,
@@ -31,21 +76,124 @@ class ConfigManager:
                 "worksheet_name": "Consumers pg1"
             },
             "processing_options": {
-                "use_geocoding": False,
+                "use_geocoding": True,
                 "open_output": False,
                 "debug_mode": False,
                 "use_decimal_format": False,
-                "use_qc_routing": False
+                "use_qc_routing": False,
+                "span_length_tolerance": 3.0
             },
             "tension_calculator": {
-                "file_path": "",
+                "file_path": "Test Files/Metronet tension calculator.xlsm",
                 "worksheet_name": "Calculations"
             },
             "manual_routes_options": {
                 "use_manual_routes": False,
                 "clear_existing_routes": False
             },
-            "column_mappings": []
+            "column_mappings": [
+                [
+                    "System",
+                    "Line Number",
+                    "Line No."
+                ],
+                [
+                    "Pole",
+                    "Number",
+                    "Pole"
+                ],
+                [
+                    "Pole",
+                    "Address",
+                    "Pole Address (if available)"
+                ],
+                [
+                    "Pole",
+                    "Height & Class",
+                    "Pole Height & Class"
+                ],
+                [
+                    "Power",
+                    "Lowest Height",
+                    "Secondary or Neutral Power Height (Height of Lowest Power Conductor or Equipment, excluding streetlights)"
+                ],
+                [
+                    "Street Light",
+                    "Lowest Height",
+                    "Streetlight"
+                ],
+                [
+                    "Pole",
+                    "To Pole",
+                    "To Pole"
+                ],
+                [
+                    "Span",
+                    "Length",
+                    "Pole to Pole Span Length (from starting point)"
+                ],
+                [
+                    "New Guy",
+                    "Lead",
+                    "Guy Lead"
+                ],
+                [
+                    "New Guy",
+                    "Direction",
+                    "Guy Direction"
+                ],
+                [
+                    "New Guy",
+                    "Size",
+                    "Guy Size"
+                ],
+                [
+                    "Pole",
+                    "MR Notes",
+                    "Notes (Items that need to be performed by Consumers Energy or other Companies)"
+                ],
+                [
+                    "Proposed MetroNet",
+                    "Attachment Ht",
+                    "Proposed height of new attachment point"
+                ],
+                [
+                    "Proposed MetroNet",
+                    "Midspan Ht",
+                    "Final Mid Span Ground Clearance of Proposed Attachment"
+                ],
+                [
+                    "Verizon",
+                    "Attachment Ht",
+                    "Verizon"
+                ],
+                [
+                    "Zayo",
+                    "Midspan Ht",
+                    "Zayo"
+                ],
+                [
+                    "AT&T",
+                    "Attachment Ht",
+                    "AT&T"
+                ],
+                [
+                    "Jackson ISD",
+                    "Attachment Ht",
+                    "Jackson ISD"
+                ],
+                [
+                    "Comcast",
+                    "Attachment Ht",
+                    "Comcast"
+                ],
+                [
+                    "Proposed MetroNet",
+                    "Tension",
+                    "Heavy Loaded Tension (NESC Rule 251)"
+                ]
+            ],
+            "decimal_measurements": False
         }
     
     def get_config_file_path(self, config_name):

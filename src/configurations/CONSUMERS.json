@@ -15,18 +15,13 @@
     "Neutral",
     "Secondary Drip Loop",
     "Riser",
-    "Transformer",
-    "Consumers",
-    "Energy",
-    "Power Guy"
+    "Transformer"
   ],
   "ignore_scid_keywords": [
     "AT&T",
-    "Foreign Pole",
     "Unknown",
-    "Consumers",
-    "Energy",
-    "POLE"
+    "POLE",
+    "FOREIGN"
   ],
   "telecom_keywords": {
     "Proposed MetroNet": [
@@ -53,6 +48,9 @@
     "Zayo": [
       "zayo",
       "Zayo"
+    ],
+    "Jackson ISD": [
+      "JACKSON ISD"
     ]
   },
   "output_settings": {
@@ -69,7 +67,7 @@
     "span_length_tolerance": 3.0
   },
   "tension_calculator": {
-    "file_path": "Test Files/Metronet tension calculator.xlsm",
+    "file_path": "",
     "worksheet_name": "Calculations"
   },
   "manual_routes_options": {
@@ -84,7 +82,7 @@
     ],
     [
       "Pole",
-      "Height & Class",
+      "Number",
       "Pole"
     ],
     [

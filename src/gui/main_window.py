@@ -48,7 +48,7 @@ class PoleMapperApp:
             self.last_paths = self.load_last_paths()
             
             # Configuration management
-            self.current_config_name = "Default"
+            self.current_config_name = self.last_paths.get("last_config", "Default")
             self.config = self.config_manager.get_default_config()
             self.mapping_data = []
             
@@ -71,14 +71,15 @@ class PoleMapperApp:
             raise
 
     def load_last_paths(self):
-        """Load last used file paths from JSON"""
+        """Load last used file paths and configuration from JSON"""
         default_paths = {
             "input_file": "",
             "attachment_file": "",
             "output_file": "",
             "qc_file": "",
             "tension_calculator_file": "",
-            "last_directory": str(Path.home())
+            "last_directory": str(Path.home()),
+            "last_config": "Default"
         }
         
         try:
@@ -104,6 +105,13 @@ class PoleMapperApp:
                     if not Path(last_dir).exists():
                         loaded_paths["last_directory"] = str(Path.home())
 
+                    # Validate last_config exists in available configs
+                    last_config = loaded_paths.get("last_config", "Default")
+                    available_configs = self.config_manager.get_available_configs()
+                    if last_config not in available_configs:
+                        logging.info(f"Saved config '{last_config}' no longer exists – using Default")
+                        loaded_paths["last_config"] = "Default"
+
                     default_paths.update(loaded_paths)
         except Exception as e:
             logging.error(f"Error loading last paths: {e}")
@@ -111,7 +119,7 @@ class PoleMapperApp:
         return default_paths
 
     def save_last_paths(self):
-        """Save current file paths to JSON"""
+        """Save current file paths and configuration to JSON"""
         try:
             def abs_path(p):
                 return self._clean_path(p)
@@ -121,13 +129,14 @@ class PoleMapperApp:
                 "attachment_file": abs_path(self.attachment_var.get() if hasattr(self, 'attachment_var') else ""),
                 "output_file": abs_path(self.output_var.get() if hasattr(self, 'output_var') else ""),
                 "qc_file": abs_path(self.qc_var.get() if hasattr(self, 'qc_var') else ""),
-                "last_directory": getattr(self, 'last_directory', str(Path.home()))
+                "last_directory": getattr(self, 'last_directory', str(Path.home())),
+                "last_config": getattr(self, 'current_config_name', "Default")
             }
             
             with open(self.paths_file, 'w') as f:
                 json.dump(paths, f, indent=2)
             
-            logging.debug("Saved last paths to JSON")
+            logging.debug("Saved last paths and configuration to JSON")
         except Exception as e:
             logging.error(f"Error saving last paths: {e}")
 
@@ -294,7 +303,7 @@ PROCESSING:
         self.scrollable_left_frame.bind("<Configure>", on_frame_configure)
         canvas.bind("<Configure>", on_canvas_configure)
         
-        # Mouse wheel scrolling
+        # Mouse wheel scrolling - bind only to this canvas and its children
         def on_mousewheel(event):
             if hasattr(event, 'delta') and event.delta:
                 delta = event.delta
@@ -305,9 +314,15 @@ PROCESSING:
             if delta:
                 canvas.yview_scroll(int(-1 * (delta / 120)), "units")
         
-        canvas.bind_all("<MouseWheel>", on_mousewheel)
-        canvas.bind_all("<Button-4>", on_mousewheel)
-        canvas.bind_all("<Button-5>", on_mousewheel)
+        # Bind mouse wheel only to this specific canvas and its children
+        canvas.bind("<MouseWheel>", on_mousewheel)
+        canvas.bind("<Button-4>", on_mousewheel)
+        canvas.bind("<Button-5>", on_mousewheel)
+        
+        # Also bind to the scrollable frame and all its children
+        self.scrollable_left_frame.bind("<MouseWheel>", on_mousewheel)
+        self.scrollable_left_frame.bind("<Button-4>", on_mousewheel)
+        self.scrollable_left_frame.bind("<Button-5>", on_mousewheel)
         
         # Create all sections
         self.create_config_management_section()
@@ -329,6 +344,14 @@ PROCESSING:
         self.config_combo.grid(row=0, column=1, sticky=W, padx=(10, 0))
         self.config_combo.bind('<<ComboboxSelected>>', self.on_config_change)
         
+        # Prevent mouse wheel from changing dropdown values
+        def prevent_mousewheel(event):
+            return "break"
+        
+        self.config_combo.bind("<MouseWheel>", prevent_mousewheel)
+        self.config_combo.bind("<Button-4>", prevent_mousewheel)
+        self.config_combo.bind("<Button-5>", prevent_mousewheel)
+        
         # Buttons
         btn_frame = ttk.Frame(config_mgmt)
         btn_frame.grid(row=1, column=0, columnspan=2, sticky=EW, pady=(10, 0))
@@ -347,6 +370,14 @@ PROCESSING:
         self.power_company_var = StringVar(value=self.config["power_company"])
         power_entry = ttk.Entry(power_frame, textvariable=self.power_company_var)
         power_entry.pack(side=LEFT, fill=X, expand=True)
+        
+        # Prevent mouse wheel from changing entry values
+        def prevent_mousewheel(event):
+            return "break"
+        
+        power_entry.bind("<MouseWheel>", prevent_mousewheel)
+        power_entry.bind("<Button-4>", prevent_mousewheel)
+        power_entry.bind("<Button-5>", prevent_mousewheel)
         
         # Add trace with recursion protection
         def on_power_company_change(*args):
@@ -411,6 +442,14 @@ PROCESSING:
         entry = ttk.Entry(controls)
         entry.pack(side=LEFT, fill=X, expand=True, padx=(0, 5))
         
+        # Prevent mouse wheel from changing entry values
+        def prevent_mousewheel(event):
+            return "break"
+        
+        entry.bind("<MouseWheel>", prevent_mousewheel)
+        entry.bind("<Button-4>", prevent_mousewheel)
+        entry.bind("<Button-5>", prevent_mousewheel)
+        
         def add_item():
             item = entry.get().strip()
             if item and item not in self.config[config_key]:
@@ -462,7 +501,7 @@ PROCESSING:
         self.telecom_frame.bind("<Configure>", on_frame_configure)
         canvas.bind("<Configure>", on_canvas_configure)
         
-        # Mouse wheel scrolling
+        # Mouse wheel scrolling - bind only to this canvas and its children
         def on_mousewheel(event):
             if hasattr(event, 'delta') and event.delta:
                 delta = event.delta
@@ -473,9 +512,15 @@ PROCESSING:
             if delta:
                 canvas.yview_scroll(int(-1 * (delta / 120)), "units")
         
-        canvas.bind_all("<MouseWheel>", on_mousewheel)
-        canvas.bind_all("<Button-4>", on_mousewheel)
-        canvas.bind_all("<Button-5>", on_mousewheel)
+        # Bind mouse wheel only to this specific canvas and its children
+        canvas.bind("<MouseWheel>", on_mousewheel)
+        canvas.bind("<Button-4>", on_mousewheel)
+        canvas.bind("<Button-5>", on_mousewheel)
+        
+        # Also bind to the telecom frame and all its children
+        self.telecom_frame.bind("<MouseWheel>", on_mousewheel)
+        self.telecom_frame.bind("<Button-4>", on_mousewheel)
+        self.telecom_frame.bind("<Button-5>", on_mousewheel)
         
         self.populate_telecom_keywords()
 
@@ -611,7 +656,7 @@ PROCESSING:
         self.mappings_frame.bind("<Configure>", on_frame_configure)
         canvas.bind("<Configure>", on_canvas_configure)
         
-        # Mouse wheel scrolling
+        # Mouse wheel scrolling - bind only to this canvas and its children
         def on_mousewheel(event):
             if hasattr(event, 'delta') and event.delta:
                 delta = event.delta
@@ -622,9 +667,15 @@ PROCESSING:
             if delta:
                 canvas.yview_scroll(int(-1 * (delta / 120)), "units")
         
-        canvas.bind_all("<MouseWheel>", on_mousewheel)
-        canvas.bind_all("<Button-4>", on_mousewheel)
-        canvas.bind_all("<Button-5>", on_mousewheel)
+        # Bind mouse wheel only to this specific canvas and its children
+        canvas.bind("<MouseWheel>", on_mousewheel)
+        canvas.bind("<Button-4>", on_mousewheel)
+        canvas.bind("<Button-5>", on_mousewheel)
+        
+        # Also bind to the mappings frame and all its children
+        self.mappings_frame.bind("<MouseWheel>", on_mousewheel)
+        self.mappings_frame.bind("<Button-4>", on_mousewheel)
+        self.mappings_frame.bind("<Button-5>", on_mousewheel)
         
         self.populate_mappings()
         
@@ -667,6 +718,17 @@ PROCESSING:
         
         # Delete button
         ttk.Button(row_frame, text="Delete", command=lambda idx=row_idx: self.delete_mapping(idx)).grid(row=0, column=3, padx=(20, 0))
+        
+        # Prevent mouse wheel from changing dropdown values
+        def prevent_mousewheel(event):
+            return "break"
+        
+        element_combo.bind("<MouseWheel>", prevent_mousewheel)
+        element_combo.bind("<Button-4>", prevent_mousewheel)
+        element_combo.bind("<Button-5>", prevent_mousewheel)
+        attribute_combo.bind("<MouseWheel>", prevent_mousewheel)
+        attribute_combo.bind("<Button-4>", prevent_mousewheel)
+        attribute_combo.bind("<Button-5>", prevent_mousewheel)
         
         # Trace callbacks
         def on_element_change(*args):
@@ -1336,6 +1398,8 @@ PROCESSING:
                 self.load_config()
                 self.update_ui_values()
                 self.update_ui_state()
+                # Save the last selected configuration
+                self.save_last_paths()
         except Exception as e:
             logging.error(f"Error changing configuration: {e}")
     
@@ -1490,6 +1554,8 @@ PROCESSING:
                 self.current_config_name = "Default"
                 self.config_var.set("Default")
                 self.load_config()
+                # Save the last selected configuration
+                self.save_last_paths()
                 
                 logging.info("Configuration deleted successfully!")
                 messagebox.showinfo("Success", "Configuration deleted successfully!")
@@ -1507,6 +1573,7 @@ PROCESSING:
             # No confirmation dialog - just reset
             self.config = self.config_manager.get_default_config()
             self.update_ui_values()
+            self.update_ui_state()
             self.auto_save_config()
             logging.info("Configuration reset to defaults!")
         except Exception as e:
