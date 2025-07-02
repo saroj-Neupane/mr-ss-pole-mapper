@@ -354,6 +354,8 @@ class PoleDataProcessor:
     def _extract_guy_info(self, note):
         """Extract guy information from notes.
            Supports multiple formats:
+             - "PL NEW SINGLE HELIX ANCHOR 15' S WITH OFFSET" -> Guy Lead = "15'", Guy Direction = "S"
+             - "PL NEW xxxxxx ANCHOR 20'6" NW" -> Guy Lead = "20'6"", Guy Direction = "NW"
              - "ANCHOR 10' W"  -> Guy Lead = "10'" and Guy Direction = "W"
              - "ANCHOR 15'6" NW" -> Guy Lead = "15'6"" and Guy Direction = "NW"
              - "GUY 3/8" EHS 20' S" -> Guy Size = "3/8" EHS", Guy Lead = "20'", Guy Direction = "S"
@@ -367,56 +369,79 @@ class PoleDataProcessor:
         directions = []
         sizes = []
         
-        # Pattern 1: ANCHOR format - "ANCHOR 10' W"
-        anchor_pattern = r"ANCHOR\s+(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})"
-        anchor_matches = re.findall(anchor_pattern, note)
-        for feet, inches, direction in anchor_matches:
-            # Build Guy Lead string preserving inches if provided
-            if inches:
-                lead = f"{feet}'{inches}\""
-            else:
-                lead = f"{feet}'"
-            lead = lead.strip()
-            direction = direction.strip()
-            combined = f"{lead} {direction}"
-            if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
-                leads.append(lead)
-                directions.append(direction)
-                sizes.append('')  # No size info in ANCHOR format
+        # Pattern 0: PL NEW format - "PL NEW SINGLE HELIX ANCHOR 15' S WITH OFFSET"
+        pl_new_pattern = r"PL\s+NEW\s+[A-Z\s]+\s+ANCHOR\s+(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})(?:\s|$)"
+        pl_new_matches = re.findall(pl_new_pattern, note)
         
-        # Pattern 2: GUY with size - "GUY 3/8" EHS 20' S" or "5/16" EHS GUY 15' N"
-        guy_pattern = r"(?:GUY\s+)?(\d+/\d+\"\s*EHS|[\d.]+\"\s*EHS)\s*(?:GUY\s+)?(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})"
-        guy_matches = re.findall(guy_pattern, note)
-        for size, feet, inches, direction in guy_matches:
-            # Build Guy Lead string preserving inches if provided
-            if inches:
-                lead = f"{feet}'{inches}\""
-            else:
-                lead = f"{feet}'"
-            lead = lead.strip()
-            direction = direction.strip()
-            size = size.strip()
-            combined = f"{lead} {direction}"
-            if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
-                leads.append(lead)
-                directions.append(direction)
-                sizes.append(size)
-        
-        # Pattern 3: General guy pattern - any remaining patterns with just lead/direction
-        general_pattern = r"(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})"
-        general_matches = re.findall(general_pattern, note)
-        for feet, inches, direction in general_matches:
-            if inches:
-                lead = f"{feet}'{inches}\""
-            else:
-                lead = f"{feet}'"
-            lead = lead.strip()
-            direction = direction.strip()
-            combined = f"{lead} {direction}"
-            if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
-                leads.append(lead)
-                directions.append(direction)
-                sizes.append('')  # No size info in general format
+        # If PL NEW patterns are found, only use those and skip other patterns
+        if pl_new_matches:
+            for feet, inches, direction in pl_new_matches:
+                # Build Guy Lead string preserving inches if provided
+                if inches:
+                    lead = f"{feet}'{inches}\""
+                else:
+                    lead = f"{feet}'"
+                lead = lead.strip()
+                direction = direction.strip()
+                combined = f"{lead} {direction}"
+                if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
+                    leads.append(lead)
+                    directions.append(direction)
+                    sizes.append('')  # No size info in PL NEW format
+        else:
+            # Only process other patterns if no PL NEW patterns were found
+            
+            # Pattern 1: ANCHOR format - "ANCHOR 10' W"
+            anchor_pattern = r"ANCHOR\s+(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})"
+            anchor_matches = re.findall(anchor_pattern, note)
+            for feet, inches, direction in anchor_matches:
+                # Build Guy Lead string preserving inches if provided
+                if inches:
+                    lead = f"{feet}'{inches}\""
+                else:
+                    lead = f"{feet}'"
+                lead = lead.strip()
+                direction = direction.strip()
+                combined = f"{lead} {direction}"
+                if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
+                    leads.append(lead)
+                    directions.append(direction)
+                    sizes.append('')  # No size info in ANCHOR format
+            
+            # Pattern 2: GUY with size - "GUY 3/8" EHS 20' S" or "5/16" EHS GUY 15' N"
+            guy_pattern = r"(?:GUY\s+)?(\d+/\d+\"\s*EHS|[\d.]+\"\s*EHS)\s*(?:GUY\s+)?(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})"
+            guy_matches = re.findall(guy_pattern, note)
+            for size, feet, inches, direction in guy_matches:
+                # Build Guy Lead string preserving inches if provided
+                if inches:
+                    lead = f"{feet}'{inches}\""
+                else:
+                    lead = f"{feet}'"
+                lead = lead.strip()
+                direction = direction.strip()
+                size = size.strip()
+                combined = f"{lead} {direction}"
+                if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
+                    leads.append(lead)
+                    directions.append(direction)
+                    sizes.append(size)
+            
+            # Pattern 3: General guy pattern - any remaining patterns with just lead/direction
+            # Make this more restrictive to avoid matching height values
+            general_pattern = r"(?:^|\s)(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})(?:\s|$)"
+            general_matches = re.findall(general_pattern, note)
+            for feet, inches, direction in general_matches:
+                if inches:
+                    lead = f"{feet}'{inches}\""
+                else:
+                    lead = f"{feet}'"
+                lead = lead.strip()
+                direction = direction.strip()
+                combined = f"{lead} {direction}"
+                if combined not in [f"{l} {d}" for l, d in zip(leads, directions)]:
+                    leads.append(lead)
+                    directions.append(direction)
+                    sizes.append('')  # No size info in general format
         
         return {'leads': leads, 'directions': directions, 'sizes': sizes}
 

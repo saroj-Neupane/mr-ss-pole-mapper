@@ -79,7 +79,7 @@
     "span_length_tolerance": 2.0
   },
   "tension_calculator": {
-    "file_path": "C:/Users/nsaro/Desktop/Projects Python/MR SS App V3/mr-ss-pole-mapper/Test_Files/Metronet tension calculator.xlsm",
+    "file_path": "",
     "worksheet_name": "Calculations"
   },
   "manual_routes_options": {

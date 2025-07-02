@@ -254,27 +254,56 @@ class ConnectionProcessor:
         logging.info("Manual routes applied successfully")
     
     def _extract_guy_info(self, note):
-        """Extract guy wire information from notes"""
+        """Extract guy wire information from notes.
+           Supports multiple formats:
+             - "PL NEW SINGLE HELIX ANCHOR 15' S WITH OFFSET" -> Guy Lead = "15'", Guy Direction = "S"
+             - "PL NEW xxxxxx ANCHOR 20'6" NW" -> Guy Lead = "20'6"", Guy Direction = "NW"
+             - "guy lead: 25' guy direction: NW" -> Guy Lead = "25'", Guy Direction = "NW"
+        """
         guy_info = {'leads': [], 'directions': []}
         
         if not note:
             return guy_info
         
-        note_lower = str(note).lower()
+        note_str = str(note).upper()
         
-        # Extract guy leads
+        # Pattern 1: PL NEW format - "PL NEW SINGLE HELIX ANCHOR 15' S WITH OFFSET"
         import re
-        lead_matches = re.findall(r'guy\s*lead[:\s]*([^,\n]+)', note_lower)
-        for match in lead_matches:
-            clean_lead = match.strip()
-            if clean_lead:
-                guy_info['leads'].append(clean_lead)
+        pl_new_pattern = r"PL\s+NEW\s+[A-Z\s]+\s+ANCHOR\s+(\d+)'(?:\s*(\d+)\")?\s+([NSEW]{1,2})(?:\s|$)"
+        pl_new_matches = re.findall(pl_new_pattern, note_str)
         
-        # Extract guy directions
-        direction_matches = re.findall(r'guy\s*direction[:\s]*([^,\n]+)', note_lower)
-        for match in direction_matches:
-            clean_direction = match.strip()
-            if clean_direction:
-                guy_info['directions'].append(clean_direction)
+        # If PL NEW patterns are found, only use those and skip other patterns
+        if pl_new_matches:
+            for feet, inches, direction in pl_new_matches:
+                # Build Guy Lead string preserving inches if provided
+                if inches:
+                    lead = f"{feet}'{inches}\""
+                else:
+                    lead = f"{feet}'"
+                lead = lead.strip()
+                direction = direction.strip()
+                combined = f"{lead} {direction}"
+                if combined not in [f"{l} {d}" for l, d in zip(guy_info['leads'], guy_info['directions'])]:
+                    guy_info['leads'].append(lead)
+                    guy_info['directions'].append(direction)
+        else:
+            # Only process other patterns if no PL NEW patterns were found
+            
+            # Pattern 2: Explicit keywords format - "guy lead: 25' guy direction: NW"
+            note_lower = str(note).lower()
+            
+            # Extract guy leads
+            lead_matches = re.findall(r'guy\s*lead[:\s]*([^,\n]+)', note_lower)
+            for match in lead_matches:
+                clean_lead = match.strip()
+                if clean_lead:
+                    guy_info['leads'].append(clean_lead)
+            
+            # Extract guy directions
+            direction_matches = re.findall(r'guy\s*direction[:\s]*([^,\n]+)', note_lower)
+            for match in direction_matches:
+                clean_direction = match.strip()
+                if clean_direction:
+                    guy_info['directions'].append(clean_direction)
         
         return guy_info 
