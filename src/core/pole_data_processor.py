@@ -618,9 +618,8 @@ class PoleDataProcessor:
                                 attachment_height = self._parse_height_value(result.get(provider, ''))
                                 logging.info(f"Attachment height for {provider}: {attachment_height} (raw: {result.get(provider, 'N/A')})")
                                 
-                                # Get midspan height from section sheet
+                                # Get midspan height from section sheet (use the same section data already found)
                                 midspan_height = None
-                                section = self._find_section(conn_info.get('connection_id', ''), sections_df, pole_scid, to_pole_scid)
                                 if section is not None:
                                     # Look for POA_ columns that contain MetroNet in the corresponding owner column
                                     for col in section.index:
