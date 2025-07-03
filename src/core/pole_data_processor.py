@@ -460,7 +460,7 @@ class PoleDataProcessor:
             
             # Find section data for this connection
             connection_id = conn_info.get('connection_id', '')
-            section = self._find_section(connection_id, sections_df)
+            section = self._find_section(connection_id, sections_df, pole_scid, to_pole_scid)
             logging.debug(f"Section lookup for {pole_scid} -> {to_pole_scid}: connection_id='{connection_id}', section found: {section is not None}")
             
             # If no section found via connection_id, try alternative approach for pole-to-reference connections
@@ -482,7 +482,7 @@ class PoleDataProcessor:
                     # Try to find sections using these connection_ids
                     if potential_connection_ids:
                         for conn_id in potential_connection_ids:
-                            potential_section = self._find_section(conn_id, sections_df)
+                            potential_section = self._find_section(conn_id, sections_df, pole_scid, to_pole_scid)
                             if potential_section is not None:
                                 section = potential_section
                                 logging.debug(f"Using alternative section lookup for {pole_scid} -> {to_pole_scid}: found section data via connection {conn_id}")
@@ -620,7 +620,7 @@ class PoleDataProcessor:
                                 
                                 # Get midspan height from section sheet
                                 midspan_height = None
-                                section = self._find_section(conn_info.get('connection_id', ''), sections_df)
+                                section = self._find_section(conn_info.get('connection_id', ''), sections_df, pole_scid, to_pole_scid)
                                 if section is not None:
                                     # Look for POA_ columns that contain MetroNet in the corresponding owner column
                                     for col in section.index:
@@ -712,13 +712,23 @@ class PoleDataProcessor:
             logging.error(f"Error creating output row for {pole_scid} -> {to_pole_scid}: {e}")
             return None
 
-    def _find_section(self, connection_id, sections_df):
-        """Find section data for a connection_id, choosing section with lowest Proposed MetroNet height if multiple entries exist"""
+    def _find_section(self, connection_id, sections_df, pole_scid=None, to_pole_scid=None):
+        """Find section data for a connection_id, choosing section with lowest Proposed MetroNet height if multiple entries exist.
+        If multiple rows match, further filter by pole_scid and to_pole_scid if columns exist."""
         if sections_df is None or sections_df.empty:
             return None
         
         # Filter for matching connection_id
         matching = sections_df[sections_df['connection_id'] == connection_id]
+        
+        # If possible, further filter by pole_scid and to_pole_scid
+        pole_cols = [col for col in sections_df.columns if col.lower() in ['pole', 'from_pole', 'pole_scid', 'from_scid']]
+        to_pole_cols = [col for col in sections_df.columns if col.lower() in ['to_pole', 'to_scid']]
+        if pole_scid and to_pole_scid and not matching.empty:
+            for pole_col in pole_cols:
+                matching = matching[matching[pole_col] == pole_scid]
+            for to_pole_col in to_pole_cols:
+                matching = matching[matching[to_pole_col] == to_pole_scid]
         
         if matching.empty:
             return None
@@ -726,36 +736,38 @@ class PoleDataProcessor:
         if len(matching) == 1:
             return matching.iloc[0]
         
-        # Choose entry with lowest Proposed MetroNet height when multiple entries exist
+        # Choose entry with lowest overall attachment height when multiple entries exist
         if len(matching) > 1:
             matching_copy = matching.copy()
             
-            # Look for Proposed MetroNet height columns
-            metronet_height_cols = []
-            for col in matching.columns:
-                if col.startswith("POA_") and col.endswith("HT"):
-                    # Check if corresponding owner column contains MetroNet-related data
-                    owner_col = col[:-2]  # Remove 'HT' suffix
-                    if owner_col in matching.columns:
-                        for idx in matching.index:
-                            owner_value = str(matching.loc[idx, owner_col]).lower()
-                            if any(keyword.lower() in owner_value for keyword in ["metronet", "metro"]):
-                                metronet_height_cols.append(col)
-                                break
+            # Find all height columns (POA_*HT)
+            height_cols = [col for col in matching.columns if col.startswith("POA_") and col.endswith("HT")]
             
-            # If we found Proposed MetroNet height columns, use the lowest one
-            if metronet_height_cols:
-                for ht_col in metronet_height_cols:
-                    if any(pd.notna(matching[ht_col])):
-                        # Parse heights and find minimum
-                        matching_copy['metronet_height_numeric'] = matching_copy[ht_col].apply(
-                            lambda x: Utils.parse_height_decimal(x) if pd.notna(x) else float('inf')
-                        )
-                        if not matching_copy['metronet_height_numeric'].isna().all():
-                            min_row = matching_copy.loc[matching_copy['metronet_height_numeric'].idxmin()]
-                            return min_row
+            if height_cols:
+                # Calculate the lowest height for each row across all height columns
+                min_heights = []
+                for idx in matching.index:
+                    row_heights = []
+                    for ht_col in height_cols:
+                        height_value = matching.loc[idx, ht_col]
+                        if pd.notna(height_value):
+                            try:
+                                height_decimal = Utils.parse_height_decimal(height_value)
+                                if height_decimal is not None:
+                                    row_heights.append(height_decimal)
+                            except:
+                                continue
+                    
+                    # Find the minimum height for this row
+                    min_height = min(row_heights) if row_heights else float('inf')
+                    min_heights.append(min_height)
+                
+                # Find the row with the overall lowest height
+                if min_heights and any(h != float('inf') for h in min_heights):
+                    min_idx = min_heights.index(min(min_heights))
+                    return matching.iloc[min_idx]
             
-            # If no Proposed MetroNet height found, return first entry
+            # If no valid heights found, return first entry
             return matching.iloc[0]
         
         return matching.iloc[0]
